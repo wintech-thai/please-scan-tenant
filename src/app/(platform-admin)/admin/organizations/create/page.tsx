@@ -45,7 +45,7 @@ export default function CreateOrganizationPage() {
       }
       await queryClient.invalidateQueries({ queryKey: ["platform-admin", "organizations"], refetchType: "all" });
       toast.success(t.organizations.createdSuccess);
-      router.push(RouteConfig.PLATFORM_ADMIN.ORGANIZATION.LIST);
+      router.push(`${RouteConfig.PLATFORM_ADMIN.ORGANIZATION.LIST}?highlight=${orgId.trim()}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t.organizations.failedToCreate);
     } finally {
