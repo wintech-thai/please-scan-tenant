@@ -7,6 +7,10 @@ export const authApi = {
   login: (data: LoginSchemaType) => {
     return axios.post<LoginResponse>("/api/auth/login", data);
   },
+  // Platform admin (AdminUsers table) - คนละ backend endpoint จาก org user login
+  adminLogin: (data: LoginSchemaType) => {
+    return axios.post<LoginResponse>("/api/auth/admin-login", data);
+  },
   logout: {
     keys: "logout",
     api: (orgId: string) =>

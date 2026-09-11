@@ -2,6 +2,12 @@
 
 import axios from "axios";
 import { env } from "next-runtime-env";
+import { isAdminRole } from "./web-role";
+import { RouteConfig } from "@/config/route.config";
+
+function loginRedirectUrl(): string {
+  return isAdminRole ? RouteConfig.PLATFORM_ADMIN.LOGIN : RouteConfig.LOGIN;
+}
 
 export const apiClient = axios.create({
   baseURL: env("NEXT_PUBLIC_API_URL"),
@@ -89,15 +95,15 @@ api.interceptors.response.use(
         isRefreshing = false;
         processQueue(refreshError);
 
-        // Refresh ล้มเหลว -> redirect ไป login
-        window.location.href = "/auth/sign-in";
+        // Refresh ล้มเหลว -> redirect ไป login (หน้า admin หรือ tenant ตาม WEB_ROLE)
+        window.location.href = loginRedirectUrl();
         return Promise.reject(refreshError);
       }
     }
 
     // กรณีอื่นๆ ที่ไม่ใช่ 401
     if (status === 401) {
-      window.location.href = "/auth/sign-in";
+      window.location.href = loginRedirectUrl();
     }
 
     return Promise.reject(err);
