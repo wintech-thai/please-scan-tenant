@@ -2,7 +2,7 @@ import Image from "next/image";
 
 type Props = {
   children: React.ReactNode;
-  header: string;
+  header: React.ReactNode;
 };
 
 export const AuthLayout = ({ children, header }: Props) => {

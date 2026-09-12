@@ -118,6 +118,9 @@ export const platformAdminApi = {
   deleteAdministratorById: (userId: string) =>
     api.delete(`${ADMIN_USER_BASE}/DeleteUserById/${userId}`),
 
+  getForgotPasswordLink: (userId: string) =>
+    api.get<{ forgotPasswordUrl?: string; resetLink?: string }>(`${ADMIN_USER_BASE}/GetForgotPasswordLink/${userId}`),
+
   // ─── System Role (built-in roles like OWNER/VIEWER, separate from Custom Role) ──
   // Response body เป็น raw array ตรง ๆ เหมือน GetCustomRoles/GetApiKeys ไม่ได้ wrap เป็น { roles: [...] }
   getRoles: () => api.post<SystemRole[]>(`${ROLE_BASE}/GetRoles`, {}),

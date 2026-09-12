@@ -1,5 +1,6 @@
 "use client";
 
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AuthLayout } from "@/modules/auth/components/auth-layout";
@@ -35,7 +36,17 @@ export default function AdminSignInPage() {
   };
 
   return (
-    <AuthLayout header="Admin sign in">
+    <AuthLayout
+      header={
+        <span className="inline-flex items-center gap-2">
+          Admin sign in
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+            <ShieldCheck className="size-3" />
+            Admin
+          </span>
+        </span>
+      }
+    >
       <form
         className="flex flex-col space-y-4"
         onSubmit={(e) => {
