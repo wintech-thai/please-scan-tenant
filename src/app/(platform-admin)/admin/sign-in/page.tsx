@@ -28,7 +28,7 @@ export default function AdminSignInPage() {
         toast.error("Invalid username or password");
         return;
       }
-      toast.success("Signed in");
+      toast.success("Login successful");
       router.push(RouteConfig.PLATFORM_ADMIN.ORGANIZATION.LIST);
     } catch {
       toast.error("Invalid username or password");

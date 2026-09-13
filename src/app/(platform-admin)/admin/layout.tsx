@@ -18,6 +18,7 @@ import ProfileModal from "@/modules/platform-admin/components/ProfileModal";
 import ChangePasswordModal from "@/modules/platform-admin/components/ChangePasswordModal";
 import { cn } from "@/lib/utils";
 import Cookies from "js-cookie";
+import { toast } from "sonner";
 import { LanguageProvider, useLang } from "@/context/LanguageContext";
 import type { Lang } from "@/lib/translations";
 
@@ -79,6 +80,7 @@ function PlatformAdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await authApi.logout.clearCookies();
+    toast.success("Logged out successfully");
     router.push(RouteConfig.PLATFORM_ADMIN.LOGIN);
   };
 
