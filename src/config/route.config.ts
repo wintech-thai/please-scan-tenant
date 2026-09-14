@@ -100,4 +100,35 @@ export const RouteConfig = {
     }
   },
   LOGIN: "/auth/sign-in",
+
+  // Platform-level admin (NEXT_PUBLIC_WEB_ROLE=ADMIN build only) - ไม่ผูกกับ [orgId]
+  // เพราะใช้สำหรับสร้าง org ใหม่ / จัดการ Administrator ข้าม org
+  PLATFORM_ADMIN: {
+    LOGIN: "/admin/sign-in",
+    ORGANIZATION: {
+      LIST: "/admin/organizations",
+      CREATE: "/admin/organizations/create",
+      VIEW: (orgCustomId: string) => `/admin/organizations/${orgCustomId}`,
+    },
+    // Administrator section - เหมือน please-erp-console: sidebar เดียวกัน 4 แท็บ
+    // (Custom Roles, API Keys, Users, Audit Log) อยู่ใต้ path เดียวกันหมด
+    ADMINISTRATOR: {
+      HOME: "/admin/administrator/users",
+      USER: {
+        LIST: "/admin/administrator/users",
+        CREATE: "/admin/administrator/users/create",
+      },
+      CUSTOM_ROLE: {
+        LIST: "/admin/administrator/custom-roles",
+        CREATE: "/admin/administrator/custom-roles/create",
+      },
+      API_KEY: {
+        LIST: "/admin/administrator/api-keys",
+        CREATE: "/admin/administrator/api-keys/create",
+      },
+      AUDIT_LOG: {
+        LIST: "/admin/administrator/audit-log",
+      },
+    },
+  },
 }

@@ -3,6 +3,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 const AUTH = process.env.NEXT_PUBLIC_API_URL!;
+// build นี้ (NEXT_PUBLIC_WEB_ROLE=ADMIN) ต้อง refresh ผ่าน AuthAdmin แทน Auth ปกติ
+// เพราะ session ที่ login เข้ามาเป็น admin token คนละชนิดกับ org-user token
+const REFRESH_PATH =
+  process.env.NEXT_PUBLIC_WEB_ROLE === "ADMIN"
+    ? "/admin-api/AuthAdmin/org/global/action/Refresh"
+    : "/api/Auth/org/temp/action/Refresh";
 
 export async function POST() {
   const cookiesStore = await cookies();
@@ -16,7 +22,7 @@ export async function POST() {
   }
 
   try {
-    const response = await fetch(`${AUTH}/api/Auth/org/temp/action/Refresh`, {
+    const response = await fetch(`${AUTH}${REFRESH_PATH}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: rt }),
