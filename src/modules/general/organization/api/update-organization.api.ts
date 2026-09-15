@@ -14,6 +14,7 @@ export interface UpdateOrganizationRequest {
   addressesArray: SArray[];
   channelsArray:  SArray[];
   logoImageUrl:   string;
+  logoImageBase64: string | null;
 }
 
 export interface SArray {

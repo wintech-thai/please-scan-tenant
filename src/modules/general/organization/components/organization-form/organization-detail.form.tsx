@@ -1,17 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { InputTags } from "@/components/ui/input-tags";
 
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { OrganizationSchemaType } from "../../schema/organization.schema";
-import { UploadLogoModal } from "../upload-logo-modal";
-import { useParams } from "next/navigation";
 import { errorMessageAsLangKey } from "@/lib/utils";
+
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB, same as Please ERP
+const MAX_DIMENSION = 512;
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
 
 interface OrganizationDetailFormProps {
   isViewMode: boolean;
@@ -21,16 +41,17 @@ export const OrganizationDetailForm = ({
   isViewMode,
 }: OrganizationDetailFormProps) => {
   const { t } = useTranslation("organization");
-  const params = useParams<{ orgId: string }>();
   const form = useFormContext<OrganizationSchemaType>();
   const isSubmitting = form.formState.isSubmitting;
+  const logoImageBase64 = form.watch("logoImageBase64");
   const logoImageUrl = form.watch("logoImageUrl");
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const logoSrc = logoImageBase64 || logoImageUrl;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Listen for custom event to open upload modal
+  // Listen for the "logo is required before save" prompt from the parent form
   useEffect(() => {
     const handleOpenModal = () => {
-      setIsUploadModalOpen(true);
+      fileInputRef.current?.click();
     };
 
     window.addEventListener('openUploadLogoModal', handleOpenModal);
@@ -39,9 +60,39 @@ export const OrganizationDetailForm = ({
     };
   }, []);
 
-  const handleUploadSuccess = (logoUrl: string, logoPath: string) => {
-    form.setValue("logoImageUrl", logoUrl, { shouldDirty: true });
-    form.setValue("logoImagePath", logoPath, { shouldDirty: true });
+  const processLogoFile = async (file: File) => {
+    if (!["image/png", "image/jpeg", "image/jpg"].includes(file.type)) {
+      toast.error(t("logo.onlyPNG"));
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(t("logo.maxSize"));
+      return;
+    }
+
+    const dataUrl = await readFileAsBase64(file);
+    const { width, height } = await getImageDimensions(dataUrl);
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+      toast.error(t("logo.recommendedSize"));
+      return;
+    }
+
+    form.setValue("logoImageBase64", dataUrl, { shouldDirty: true });
+    // New upload replaces any legacy GCS-hosted logo
+    form.setValue("logoImagePath", "", { shouldDirty: true });
+    form.setValue("logoImageUrl", "", { shouldDirty: true });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processLogoFile(file);
+    e.target.value = "";
+  };
+
+  const handleRemoveLogo = () => {
+    form.setValue("logoImageBase64", null, { shouldDirty: true });
+    form.setValue("logoImagePath", "", { shouldDirty: true });
+    form.setValue("logoImageUrl", "", { shouldDirty: true });
   };
 
   return (
@@ -83,10 +134,10 @@ export const OrganizationDetailForm = ({
         {/* Right side - Logo image */}
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <div className="w-full max-w-xs">
-            {logoImageUrl ? (
+            {logoSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={logoImageUrl}
+                src={logoSrc}
                 alt="Organization Logo"
                 className="w-full h-[200px] rounded-lg border object-contain"
               />
@@ -96,25 +147,38 @@ export const OrganizationDetailForm = ({
               </div>
             )}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsUploadModalOpen(true)}
-            disabled={isViewMode || isSubmitting}
-            className="gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            {t("logo.upload")}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isViewMode || isSubmitting}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              {t("logo.upload")}
+            </Button>
+            {logoSrc && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRemoveLogo}
+                disabled={isViewMode || isSubmitting}
+                className="gap-2"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
       </div>
-
-      <UploadLogoModal
-        open={isUploadModalOpen}
-        onOpenChange={setIsUploadModalOpen}
-        orgId={params.orgId}
-        onUploadSuccess={handleUploadSuccess}
-      />
 
       {/* Full width fields */}
       <div className="space-y-4 mt-4">
