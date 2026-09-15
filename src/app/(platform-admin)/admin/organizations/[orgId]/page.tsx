@@ -11,7 +11,7 @@ import type { OrgUserItem } from "@/modules/platform-admin/types/platform-admin.
 import { RouteConfig } from "@/config/route.config";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LanguageContext";
-import { processRegistrationUrl } from "@/lib/registration-url";
+import { processRegistrationUrl, toTenantUrl } from "@/lib/registration-url";
 import { ResetLinkModal } from "@/components/ui/reset-link-modal";
 import { RowActions } from "@/components/ui/row-actions";
 
@@ -99,7 +99,7 @@ export default function OrganizationDetailPage() {
         return;
       }
       const rawUrl = res.data?.registrationUrl;
-      setRegistrationUrl(rawUrl ? processRegistrationUrl(rawUrl) : null);
+      setRegistrationUrl(rawUrl ? toTenantUrl(processRegistrationUrl(rawUrl)) : null);
       toast.success(t.organizations.invitedSuccess);
       invalidateUsers();
     } catch (err: unknown) {
@@ -141,7 +141,7 @@ export default function OrganizationDetailPage() {
     try {
       const res = await platformAdminApi.getOrgUserForgotPasswordLink(orgId, orgUserId);
       const raw = res.data?.forgotPasswordUrl ?? "";
-      setResetLinkModal({ open: true, link: raw ? processRegistrationUrl(raw) : "" });
+      setResetLinkModal({ open: true, link: raw ? toTenantUrl(processRegistrationUrl(raw)) : "" });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t.users.failedToGetResetLink);
       setResetLinkModal({ open: false });

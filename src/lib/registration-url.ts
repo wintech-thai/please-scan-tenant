@@ -24,3 +24,17 @@ export function processRegistrationUrl(url: string): string {
   }
   return url;
 }
+
+// ลิงก์ที่ generate จากฝั่ง Admin console (เช่น reset password link, invite link ที่ไม่ส่งอีเมล)
+// สำหรับ Organization user ไม่ควรชี้ไปที่ domain ของ admin console (admin-dev...) เพราะ org user
+// ไม่ได้ login เข้า admin console เลย - ต้องชี้ไปที่ domain ของ tenant console (tenant-dev...) แทน
+// ใช้ convention เดียวกับ src/lib/web-role.ts ที่ตัดสินจาก "admin"/"tenant" ใน hostname
+export function toTenantUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.hostname = parsed.hostname.replace(/\badmin\b/, "tenant");
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
