@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronLeft, Plus, Copy, Check, Ban, CheckCircle, Trash2, Loader, Users } from "lucide-react";
+import { ChevronLeft, Plus, Copy, Check, Ban, CheckCircle, Trash2, Loader, Users, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { platformAdminApi } from "@/modules/platform-admin/api/platform-admin.api";
 import type { OrgUserItem } from "@/modules/platform-admin/types/platform-admin.types";
@@ -12,6 +12,8 @@ import { RouteConfig } from "@/config/route.config";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LanguageContext";
 import { processRegistrationUrl } from "@/lib/registration-url";
+import { ResetLinkModal } from "@/components/ui/reset-link-modal";
+import { RowActions } from "@/components/ui/row-actions";
 
 function isUserActive(status?: string | null): boolean {
   return (status || "").toLowerCase() === "active";
@@ -43,6 +45,7 @@ export default function OrganizationDetailPage() {
   const [toggleTarget, setToggleTarget] = useState<OrgUserItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<OrgUserItem | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [resetLinkModal, setResetLinkModal] = useState<{ open: boolean; link?: string; loading?: boolean }>({ open: false });
 
   const { data: org, isLoading: orgLoading } = useQuery({
     queryKey: ["platform-admin", "organizations"],
@@ -133,6 +136,18 @@ export default function OrganizationDetailPage() {
     }
   };
 
+  const handleGetResetLink = async (orgUserId: string) => {
+    setResetLinkModal({ open: true, loading: true });
+    try {
+      const res = await platformAdminApi.getOrgUserForgotPasswordLink(orgId, orgUserId);
+      const raw = res.data?.forgotPasswordUrl ?? "";
+      setResetLinkModal({ open: true, link: raw ? processRegistrationUrl(raw) : "" });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t.users.failedToGetResetLink);
+      setResetLinkModal({ open: false });
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget?.orgUserId) return;
     setProcessing(true);
@@ -198,7 +213,7 @@ export default function OrganizationDetailPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t.organizations.colRole}</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{t.organizations.colInitialUser}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t.organizations.colUserStatus}</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">{t.organizations.colAction}</th>
+                <th className="w-14 px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">{t.organizations.colAction}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -268,27 +283,38 @@ export default function OrganizationDetailPage() {
                           {u.userStatus || "-"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        {pending ? (
-                          <button
-                            onClick={() => setDeleteTarget(u)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            {t.organizations.deleteUser}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setToggleTarget(u)}
-                            className={cn(
-                              "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full transition-colors",
-                              active ? "text-red-600 bg-red-50 hover:bg-red-100" : "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
-                            )}
-                          >
-                            {active ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                            {active ? t.organizations.disableUser : t.organizations.enableUser}
-                          </button>
-                        )}
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <RowActions
+                          items={[
+                            {
+                              label: t.organizations.disableUser,
+                              icon: <Ban className="w-4 h-4" />,
+                              disabled: !active,
+                              danger: true,
+                              onClick: () => setToggleTarget(u),
+                            },
+                            {
+                              label: t.organizations.enableUser,
+                              icon: <CheckCircle className="w-4 h-4" />,
+                              disabled: active || pending,
+                              success: true,
+                              onClick: () => setToggleTarget(u),
+                            },
+                            {
+                              label: t.organizations.deleteUser,
+                              icon: <Trash2 className="w-4 h-4" />,
+                              disabled: !pending,
+                              danger: true,
+                              onClick: () => setDeleteTarget(u),
+                            },
+                            {
+                              label: t.users.resetPasswordLink,
+                              icon: <Key className="w-4 h-4" />,
+                              disabled: !u.orgUserId || !active,
+                              onClick: () => u.orgUserId && handleGetResetLink(u.orgUserId),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -405,6 +431,14 @@ export default function OrganizationDetailPage() {
           onConfirm={handleDeleteConfirm}
           cancelLabel={t.admin.cancel}
           confirmLabel={t.organizations.deleteUser}
+        />
+      )}
+
+      {resetLinkModal.open && (
+        <ResetLinkModal
+          link={resetLinkModal.link}
+          loading={resetLinkModal.loading}
+          onClose={() => setResetLinkModal({ open: false })}
         />
       )}
     </div>

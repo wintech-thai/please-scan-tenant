@@ -89,6 +89,11 @@ export const platformAdminApi = {
   deleteOrgUser: (orgCustomId: string, orgUserId: string) =>
     api.delete(`${ORG_BASE}/DeleteOrgUserById/${orgCustomId}/${orgUserId}`),
 
+  getOrgUserForgotPasswordLink: (orgCustomId: string, orgUserId: string) =>
+    api.get<{ status?: string; description?: string; forgotPasswordUrl?: string }>(
+      `${ORG_BASE}/GetOrgUserForgotPasswordLink/${orgCustomId}/${orgUserId}`
+    ),
+
   // Administrator = บัญชีใน table AdminUsers (คนละส่วนกับ user ของแต่ละ org)
   getAdministrators: (payload: Record<string, unknown> = {}) =>
     api.post<AdministratorItem[]>(`${ADMIN_USER_BASE}/GetUsers`, payload),

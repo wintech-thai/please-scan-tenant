@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Search, ChevronLeft, ChevronRight, Users, Trash2, Ban, CheckCircle, MoreHorizontal, Loader, Check, X, Key } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Users, Trash2, Ban, CheckCircle, Loader, Check, X, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { platformAdminApi } from "@/modules/platform-admin/api/platform-admin.api";
 import type { AdministratorItem } from "@/modules/platform-admin/types/platform-admin.types";
@@ -13,6 +13,8 @@ import { useRowHighlight } from "@/modules/platform-admin/hooks/use-row-highligh
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LanguageContext";
 import { processRegistrationUrl } from "@/lib/registration-url";
+import { ResetLinkModal } from "@/components/ui/reset-link-modal";
+import { RowActions } from "@/components/ui/row-actions";
 
 function isUserActive(status?: string | null): boolean {
   return (status || "").toLowerCase() === "active";
@@ -428,116 +430,5 @@ export default function AdministratorUsersListPage() {
     <Suspense>
       <AdministratorUsersListContent />
     </Suspense>
-  );
-}
-
-function ResetLinkModal({ link, loading, onClose }: { link?: string; loading?: boolean; onClose: () => void }) {
-  const { t } = useLang();
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    if (!link) return;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="px-7 py-5 border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-900">{t.users.resetLinkTitle}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t.users.resetLinkSubtitle}</p>
-        </div>
-        <div className="px-7 py-6">
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-gray-400">
-              <Loader className="w-4 h-4 animate-spin" />
-              <span className="text-sm">{t.users.generatingLink}</span>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
-                <span className="flex-1 text-sm text-primary break-all line-clamp-2 font-mono">{link}</span>
-                <button
-                  onClick={handleCopy}
-                  className={cn(
-                    "flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors",
-                    copied ? "bg-emerald-100 text-emerald-700" : "bg-white border border-primary/20 text-primary hover:bg-primary/10"
-                  )}
-                >
-                  {copied ? t.users.copied : t.users.copy}
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-3">{t.users.resetLinkExpiry}</p>
-            </>
-          )}
-        </div>
-        <div className="flex justify-end px-7 pb-5">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-white bg-primary rounded-lg hover:opacity-90 transition-colors">
-            {t.users.close}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ActionItem = { label: string; icon: React.ReactNode; danger?: boolean; success?: boolean; disabled?: boolean; onClick: () => void };
-
-function RowActions({ items }: { items: ActionItem[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative flex justify-center">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-      >
-        <MoreHorizontal className="w-4 h-4" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden">
-          {items.map((item, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                if (!item.disabled) {
-                  item.onClick();
-                  setOpen(false);
-                }
-              }}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left transition-colors",
-                item.disabled
-                  ? "text-gray-300 cursor-not-allowed"
-                  : item.danger
-                    ? "text-red-600 hover:bg-red-50"
-                    : item.success
-                      ? "text-emerald-600 hover:bg-emerald-50"
-                      : "text-gray-700 hover:bg-gray-50"
-              )}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
