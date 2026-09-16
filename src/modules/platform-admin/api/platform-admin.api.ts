@@ -5,6 +5,7 @@ import type {
   OrgUserItem,
   InviteOrgUserPayload,
   InviteOrgUserResult,
+  UpdateOrgUserPayload,
   AdministratorItem,
   InviteAdministratorPayload,
   InviteAdministratorResult,
@@ -88,6 +89,9 @@ export const platformAdminApi = {
 
   deleteOrgUser: (orgCustomId: string, orgUserId: string) =>
     api.delete(`${ORG_BASE}/DeleteOrgUserById/${orgCustomId}/${orgUserId}`),
+
+  updateOrgUser: (orgCustomId: string, orgUserId: string, payload: UpdateOrgUserPayload) =>
+    api.post(`${ORG_BASE}/UpdateOrgUserById/${orgCustomId}/${orgUserId}`, payload),
 
   getOrgUserForgotPasswordLink: (orgCustomId: string, orgUserId: string) =>
     api.get<{ status?: string; description?: string; forgotPasswordUrl?: string }>(

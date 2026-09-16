@@ -1,19 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronLeft, Plus, Copy, Check, Ban, CheckCircle, Trash2, Loader, Users, Key } from "lucide-react";
+import { ChevronLeft, Plus, Copy, Check, Ban, CheckCircle, Trash2, Loader, Users, Key, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { platformAdminApi } from "@/modules/platform-admin/api/platform-admin.api";
-import type { OrgUserItem } from "@/modules/platform-admin/types/platform-admin.types";
+import type { OrgUserItem, SystemRole } from "@/modules/platform-admin/types/platform-admin.types";
 import { RouteConfig } from "@/config/route.config";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/context/LanguageContext";
 import { processRegistrationUrl, toTenantUrl } from "@/lib/registration-url";
 import { ResetLinkModal } from "@/components/ui/reset-link-modal";
 import { RowActions } from "@/components/ui/row-actions";
+import { useRowHighlight } from "@/modules/platform-admin/hooks/use-row-highlight";
 
 function isUserActive(status?: string | null): boolean {
   return (status || "").toLowerCase() === "active";
@@ -27,12 +28,13 @@ function parseCsv(value?: string | null): string[] {
   return value.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-export default function OrganizationDetailPage() {
+function OrganizationDetailContent() {
   const { t } = useLang();
   const router = useRouter();
   const params = useParams<{ orgId: string }>();
   const orgId = params.orgId;
   const queryClient = useQueryClient();
+  const { selectedRowId, selectRow } = useRowHighlight(`platform_admin_org_users_highlight:${orgId}`);
 
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteUsername, setInviteUsername] = useState("");
@@ -46,6 +48,7 @@ export default function OrganizationDetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<OrgUserItem | null>(null);
   const [processing, setProcessing] = useState(false);
   const [resetLinkModal, setResetLinkModal] = useState<{ open: boolean; link?: string; loading?: boolean }>({ open: false });
+  const [editRoleTarget, setEditRoleTarget] = useState<OrgUserItem | null>(null);
 
   const { data: org, isLoading: orgLoading } = useQuery({
     queryKey: ["platform-admin", "organizations"],
@@ -163,6 +166,23 @@ export default function OrganizationDetailPage() {
     }
   };
 
+  const handleSaveRoles = async (roles: string[]) => {
+    if (!editRoleTarget?.orgUserId) return;
+    try {
+      await platformAdminApi.updateOrgUser(orgId, editRoleTarget.orgUserId, {
+        Roles: roles,
+        CustomRoleId: editRoleTarget.customRoleId ?? undefined,
+        Tags: editRoleTarget.tags ?? undefined,
+      });
+      toast.success(t.organizations.updateRoleSuccess);
+      selectRow(editRoleTarget.orgUserId);
+      invalidateUsers();
+      setEditRoleTarget(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t.organizations.failedToUpdateRole);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -241,8 +261,16 @@ export default function OrganizationDetailPage() {
                   const pending = isUserPending(u.userStatus);
                   const tagList = parseCsv(u.tags);
                   const roleList = u.roles?.length ? u.roles : parseCsv(u.rolesList);
+                  const isSelected = !!u.orgUserId && selectedRowId === u.orgUserId;
                   return (
-                    <tr key={u.orgUserId} className="hover:bg-gray-50/50">
+                    <tr
+                      key={u.orgUserId}
+                      onClick={() => u.orgUserId && selectRow(u.orgUserId)}
+                      className={cn(
+                        "border-l-[3px] transition-all cursor-pointer",
+                        isSelected ? "!bg-primary/10 border-l-primary" : "border-l-transparent hover:bg-gray-50/50"
+                      )}
+                    >
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{u.userName || "-"}</td>
                       <td className="px-4 py-3 text-sm text-gray-500">{u.userEmail || u.tmpUserEmail || "-"}</td>
                       <td className="px-4 py-3">
@@ -306,6 +334,12 @@ export default function OrganizationDetailPage() {
                               disabled: !pending,
                               danger: true,
                               onClick: () => setDeleteTarget(u),
+                            },
+                            {
+                              label: t.organizations.editRole,
+                              icon: <Shield className="w-4 h-4" />,
+                              disabled: !u.orgUserId,
+                              onClick: () => setEditRoleTarget(u),
                             },
                             {
                               label: t.users.resetPasswordLink,
@@ -441,6 +475,114 @@ export default function OrganizationDetailPage() {
           onClose={() => setResetLinkModal({ open: false })}
         />
       )}
+
+      {editRoleTarget && (
+        <EditRoleModal
+          target={editRoleTarget}
+          onCancel={() => setEditRoleTarget(null)}
+          onSave={handleSaveRoles}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function OrganizationDetailPage() {
+  return (
+    <Suspense>
+      <OrganizationDetailContent />
+    </Suspense>
+  );
+}
+
+function EditRoleModal({
+  target,
+  onCancel,
+  onSave,
+}: {
+  target: OrgUserItem;
+  onCancel: () => void;
+  onSave: (roles: string[]) => Promise<void>;
+}) {
+  const { t } = useLang();
+  const [availableRoles, setAvailableRoles] = useState<SystemRole[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(target.roles?.length ? target.roles : parseCsv(target.rolesList))
+  );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    platformAdminApi
+      .getRoles()
+      .then((res) => setAvailableRoles(res.data ?? []))
+      .catch(() => toast.error(t.organizations.failedToLoadRoles))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleRole = (roleName: string) =>
+    setSelected((prev) => {
+      const s = new Set(prev);
+      if (s.has(roleName)) s.delete(roleName);
+      else s.add(roleName);
+      return s;
+    });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave([...selected]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-6 py-5 border-b border-gray-100">
+          <h3 className="text-base font-bold text-gray-900">{t.organizations.editRoleTitle}</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{target.userName}</p>
+        </div>
+
+        <div className="px-6 py-5">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-gray-400">
+              <Loader className="w-4 h-4 animate-spin" />
+              <span className="text-sm">{t.admin.loading}</span>
+            </div>
+          ) : availableRoles.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">{t.admin.noRolesAvailable}</p>
+          ) : (
+            <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-72 overflow-y-auto">
+              {availableRoles.map((role) => (
+                <label key={role.roleId} className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(role.roleName)}
+                    onChange={() => toggleRole(role.roleName)}
+                    className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{role.roleName}</p>
+                    {role.roleDescription && <p className="text-xs text-gray-500 mt-0.5">{role.roleDescription}</p>}
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 px-6 pb-5">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+            {t.admin.cancel}
+          </Button>
+          <Button type="button" onClick={handleSave} isPending={saving} disabled={loading}>
+            {t.admin.save}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
