@@ -253,6 +253,11 @@ export const translations = {
       confirmDeleteUserDesc: "การดำเนินการนี้ไม่สามารถยกเลิกได้",
       deleteUserSuccess: "ลบผู้ใช้แล้ว",
       failedToDeleteUser: "ไม่สามารถลบผู้ใช้ได้",
+      editRole: "แก้ไขบทบาท",
+      editRoleTitle: "แก้ไขบทบาทผู้ใช้",
+      updateRoleSuccess: "อัปเดตบทบาทแล้ว",
+      failedToUpdateRole: "ไม่สามารถอัปเดตบทบาทได้",
+      failedToLoadRoles: "ไม่สามารถโหลดบทบาทได้",
     },
     signupConfirm: {
       title: "ยืนยันการลงทะเบียน",
@@ -574,6 +579,11 @@ export const translations = {
       confirmDeleteUserDesc: "This action cannot be undone.",
       deleteUserSuccess: "User deleted",
       failedToDeleteUser: "Failed to delete user",
+      editRole: "Edit Role",
+      editRoleTitle: "Edit User Role",
+      updateRoleSuccess: "Role updated",
+      failedToUpdateRole: "Failed to update role",
+      failedToLoadRoles: "Failed to load roles",
     },
     signupConfirm: {
       title: "Complete Registration",

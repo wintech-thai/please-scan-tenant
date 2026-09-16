@@ -1,6 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
-import { getESClient } from "@/lib/es-client";
+import { cookies } from "next/headers";
+
+// Same PostgreSQL-backed approach as /api/scan-items-history: onix-api's GetScanTimeline
+// endpoint reads from the "AuditLogs" Postgres table (ApiName == "Verify") and already
+// returns the exact { data, interval, total } shape this route used to build from an
+// Elasticsearch date-histogram aggregation, so no frontend changes are needed.
+
+export const runtime = "nodejs";
+
+const ACCESS_TOKEN = "access_token";
+const API = process.env.NEXT_PUBLIC_API_URL!;
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,121 +27,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Calculate appropriate interval based on date range
-    const from = new Date(dateFrom);
-    const to = new Date(dateTo);
-    const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
-
-    let interval: string;
-    if (daysDiff <= 2) {
-      interval = "1h";
-    } else if (daysDiff <= 7) {
-      interval = "3h";
-    } else if (daysDiff <= 30) {
-      interval = "6h";
-    } else {
-      interval = "1d";
+    const cookieStore = await cookies();
+    const at = cookieStore.get(ACCESS_TOKEN)?.value;
+    if (!at) {
+      return new Response("Unauthorized", { status: 401 });
     }
 
-    const esClient = getESClient();
-    const indexPattern = process.env.ES_INDEX_PATTERN || "onix-v2-*";
     const envRun = process.env.ENV_RUN || process.env.NODE_ENV || "Development";
 
-    // Build query with optional search
-    const mustClauses: any[] = [
-      {
-        term: {
-          "data.ContextData.OrgId.keyword": orgId,
-        },
-      },
-      {
-        term: {
-          "data.Environment.keyword": envRun,
-        },
-      },
-      {
-        range: {
-          "@timestamp": {
-            gte: dateFrom,
-            lte: dateTo,
-          },
-        },
-      },
-    ];
+    const payload = {
+      FullTextSearch: searchValue,
+      Environment: envRun,
+      FromDate: dateFrom,
+      ToDate: dateTo,
+    };
 
-    // Add search filter if provided
-    if (searchValue) {
-      mustClauses.push({
-        query_string: {
-          query: `*${searchValue}*`,
-          fields: [
-            "data.ContextData.CustomerEmail.keyword",
-            "data.ContextData.ProductCode.keyword",
-            "data.ContextData.FolderName.keyword",
-            "geoip.country_name.keyword",
-            "geoip.city_name.keyword",
-          ],
+    const backendRes = await fetch(
+      `${API}/api/AuditLog/org/${orgId}/action/GetScanTimeline`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Buffer.from(at, "utf-8").toString("base64")}`,
         },
-      });
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    if (!backendRes.ok) {
+      const text = await backendRes.text();
+      console.error("GetScanTimeline error:", backendRes.status, text);
+      return NextResponse.json(
+        { error: "Failed to fetch scan timeline" },
+        { status: backendRes.status }
+      );
     }
 
-    const response = await esClient.search({
-      index: indexPattern,
-      body: {
-        size: 0,
-        query: {
-          bool: {
-            must: mustClauses,
-          },
-        },
-        aggs: {
-          timeline: {
-            date_histogram: {
-              field: "@timestamp",
-              fixed_interval: interval,
-              time_zone: "Asia/Bangkok",
-              min_doc_count: 0,
-              extended_bounds: {
-                min: dateFrom,
-                max: dateTo,
-              },
-            },
-            aggs: {
-              by_product: {
-                terms: {
-                  field: "data.ContextData.ProductCode.keyword",
-                  size: 50,
-                  missing: "Unknown",
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Transform aggregation results
-    const buckets = (response.aggregations?.timeline as any)?.buckets || [];
-
-    const timelineData = buckets.map((bucket: any) => {
-      const productCounts: Record<string, number> = {};
-
-      bucket.by_product.buckets.forEach((productBucket: any) => {
-        productCounts[productBucket.key] = productBucket.doc_count;
-      });
-
-      return {
-        timestamp: bucket.key_as_string || bucket.key,
-        total: bucket.doc_count,
-        productCounts,
-      };
-    });
-
-    return NextResponse.json({
-      data: timelineData,
-      interval,
-      total: response.hits.total,
-    });
+    const result = await backendRes.json();
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("Error fetching scan timeline:", error);
     return NextResponse.json(

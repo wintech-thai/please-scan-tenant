@@ -34,6 +34,7 @@ export type OrgUserItem = {
   roles?: string[];
   rolesList?: string | null;
   isOrgInitialUser?: string | null;
+  customRoleId?: string | null;
 };
 
 export type InviteOrgUserPayload = {
@@ -46,6 +47,12 @@ export type InviteOrgUserResult = {
   description?: string;
   orgUser?: OrgUserItem;
   registrationUrl?: string | null;
+};
+
+export type UpdateOrgUserPayload = {
+  Roles?: string[];
+  CustomRoleId?: string;
+  Tags?: string;
 };
 
 export type AdministratorItem = {
