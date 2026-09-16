@@ -63,6 +63,7 @@ const OrganizationView = () => {
             channels,
             logoImagePath: data.logoImagePath || "",
             logoImageUrl: data.logoImageUrl || "",
+            logoImageBase64: data.logoImageBase64 || null,
             addressesArray,
             channelsArray,
           },
@@ -155,6 +156,7 @@ const OrganizationView = () => {
         tags: getOrg.data.data.tags,
         logoImagePath: getOrg.data.data.logoImagePath,
         logoImageUrl: getOrg.data.data.logoImageUrl,
+        logoImageBase64: getOrg.data.data.logoImageBase64,
         addresses,
         channels,
       }}

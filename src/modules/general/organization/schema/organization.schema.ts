@@ -12,6 +12,7 @@ export const useOrganizationSchema = () => {
     tags: z.string().min(1, t("validation.tagsRequired")),
     logoImagePath: z.string().optional(),
     logoImageUrl: z.string().optional(),
+    logoImageBase64: z.string().nullable().optional(),
     addresses: z.record(z.string(), z.string().nullable()).optional(),
     channels: z.record(z.string(), z.string().nullable()).optional(),
     addressesArray: z.array(z.object({

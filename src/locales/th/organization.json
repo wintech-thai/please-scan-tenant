@@ -62,7 +62,7 @@
     "clickToSelect": "หรือคลิกเพื่อเลือกไฟล์",
     "onlyJPG": "รองรับเฉพาะไฟล์ JPG (.jpg, .jpeg)",
     "onlyPNG": "รองรับเฉพาะไฟล์ PNG (.png)",
-    "maxSize": "ขนาดไฟล์สูงสุด 2 MB",
+    "maxSize": "ขนาดไฟล์สูงสุด 1 MB",
     "recommendedSize": "ขนาดที่แนะนำ 512x512 พิกเซล",
     "fileRequirements": "ข้อกำหนดไฟล์",
     "upload": "อัปโหลด",

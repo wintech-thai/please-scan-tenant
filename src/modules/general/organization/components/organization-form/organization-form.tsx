@@ -68,8 +68,8 @@ export const OrganizationForm = ({
 
   const handleSubmit = async (data: OrganizationSchemaType) => {
     // Check if logo is missing
-    if (!data.logoImagePath || !data.logoImageUrl) {
-      // Trigger upload modal by dispatching a custom event
+    if (!data.logoImageBase64 && !data.logoImageUrl) {
+      // Trigger the logo file picker by dispatching a custom event
       window.dispatchEvent(new CustomEvent('openUploadLogoModal'));
       return;
     }

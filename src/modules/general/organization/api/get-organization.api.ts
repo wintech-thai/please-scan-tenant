@@ -14,6 +14,7 @@ export interface GetOrganizationResponse {
   addressesArray: { name: string; value: string }[];
   channelsArray:  { name: string; value: string }[];
   logoImageUrl:   string;
+  logoImageBase64: string | null;
   orgCreatedDate: Date;
 }
 

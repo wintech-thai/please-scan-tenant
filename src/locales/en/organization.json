@@ -62,7 +62,7 @@
     "clickToSelect": "or click to select file",
     "onlyJPG": "Only JPG files (.jpg, .jpeg) are supported",
     "onlyPNG": "Only PNG files (.png) are supported",
-    "maxSize": "Maximum file size 2 MB",
+    "maxSize": "Maximum file size 1 MB",
     "recommendedSize": "Recommended size 512x512 pixels",
     "fileRequirements": "File Requirements",
     "upload": "Upload",

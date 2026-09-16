@@ -1,16 +1,21 @@
 import { apiClient } from "@/lib/axios";
-import { isAdminRole } from "@/lib/web-role";
 import { NextResponse } from "next/server";
 
 // Endpoint นี้ต้องเรียกได้โดยไม่ต้อง login (ผู้ใช้ยังไม่ผ่าน auth ณ จุดนี้)
 // เลยเรียก backend ตรง ๆ ผ่าน apiClient แทนที่จะผ่าน /api/bff ซึ่งบังคับต้องมี access_token cookie เสมอ
 // path /forgot-password/{orgId}/{token} เป็น path เดียวกันทั้ง admin และ tenant (backend hardcode
 // regType="forgot-password" ไว้ตายตัวไม่แยกตาม role) เลยต้องแยก endpoint ปลายทางเองตรงนี้แทน
+//
+// สำคัญ: ต้องตัดสินจาก orgId ในตัวลิงก์ (backend ใส่ "global" ให้เฉพาะ admin user เท่านั้น
+// - ดู AdminUserController.GetForgotPasswordLink) ห้ามใช้ isAdminRole (= domain ของหน้าเว็บที่เปิดอยู่)
+// เพราะลิงก์ที่ generate จากฝั่ง admin console ให้ org user จะถูก rewrite host เป็น admin-dev
+// (ดู processRegistrationUrl) ทำให้ org user เปิดลิงก์บนแอป ADMIN แต่รหัสผ่านที่ต้องแก้เป็นของ org user
 export async function POST(req: Request) {
   const { orgId, token, userName, email, password, orgUserId } = await req.json();
 
-  const base = isAdminRole
-    ? `/admin-api/RegistrationAdmin/org/${orgId || "global"}/action`
+  const isAdminReset = !orgId || orgId === "global";
+  const base = isAdminReset
+    ? `/admin-api/RegistrationAdmin/org/global/action`
     : `/api/Registration/org/${orgId}/action`;
 
   try {
