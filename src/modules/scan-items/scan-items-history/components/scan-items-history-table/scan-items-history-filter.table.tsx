@@ -9,19 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { Search, BarChart3 } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 import { useQueryStates, parseAsString } from "nuqs";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 interface ScanItemsHistoryFilterTableProps {
@@ -38,9 +31,6 @@ export const ScanItemsHistoryFilterTable = ({
   initialDateRange,
 }: ScanItemsHistoryFilterTableProps) => {
   const { t } = useTranslation("scan-items-history");
-  const router = useRouter();
-  const params = useParams<{ orgId: string }>();
-  const searchParmas = useSearchParams();
   const [queryState] = useQueryStates({
     searchField: parseAsString.withDefault("fullTextSearch"),
     searchValue: parseAsString.withDefault(""),
@@ -64,14 +54,6 @@ export const ScanItemsHistoryFilterTable = ({
     if (onSearch) {
       onSearch(searchField, searchValue, dateRange);
     }
-  };
-
-  const handleScanMapClick = () => {
-    const url = `/${
-      params.orgId
-    }/scan-items/scan-item-histories/scan-map?${searchParmas.toString()}`;
-
-    router.push(url);
   };
 
   return (
@@ -144,26 +126,6 @@ export const ScanItemsHistoryFilterTable = ({
             <Search className="size-4" />
           </Button>
         </div>
-      </div>
-
-      {/* Right side: Analytics button */}
-      <div className="w-full md:w-auto">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              className="w-full md:w-auto bg-green-500 hover:bg-green-400 transition"
-              type="button"
-            >
-              <BarChart3 className="size-4 mr-2" />
-              ANALYTICS
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleScanMapClick}>
-              {t("scanMap")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </form>
   );
